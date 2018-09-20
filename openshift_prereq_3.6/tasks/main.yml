@@ -1,0 +1,84 @@
+---
+#- name: make a dir
+#  file: path=/var/app state=directory owner=bopudir1 group=gblunixdefault mode=0777
+
+#- name: repo Creation Openshift
+#  yum_repository:
+#   name: OpenShiftRepo
+#   description: Openshift Repo
+#   baseurl: http://dcona01l.unix.anz/pub/ose-3.6/rhel-7-server-ose-3.6-rpms/
+#   gpgkey: file:///etc/pki/rpm-gpg/RPM-GPG-KEY-redhat-release
+
+- name: Install Packages
+  yum: name={{item}} state=latest
+  with_items:
+        - NetworkManager
+        - wget
+        - git
+        - net-tools
+        - bind-utils
+        - bridge-utils
+        - iptables-services
+        - bash-completion
+        - nfs-utils.x86_64
+        - kexec-tools
+        - sos
+        - psacct
+        - python-virtualenv
+        - gcc
+#        - atomic-openshift-utils
+        - atomic-openshift-excluder
+        - atomic-openshift-docker-excluder
+        - docker
+
+- name: run the unexclude command
+  command: /sbin/atomic-openshift-excluder unexclude
+
+- name: start networkmanager
+  service: name=NetworkManager state=started
+
+- name: backup the docker file
+  command: /bin/cp -p /etc/sysconfig/docker /etc/sysconfig/docker-Backup-Orignal
+
+- name: update docker file
+  copy: dest=/etc/sysconfig/docker src=docker_dev force=yes mode=0644 owner=root group=root
+
+- name: backup the docker file
+  command: /bin/cp -p /etc/sysconfig/docker-storage-setup /etc/sysconfig/docker-storage-setup-Backup-Orignal
+
+- name: copy docker-storage-setup file
+  copy:  dest=/etc/sysconfig/docker-storage-setup src=docker-storage-setup force=yes mode=0644 owner=root group=root
+
+- name: Execute the Storage Setup Command
+  command: /bin/docker-storage-setup
+
+- name: Enable the Docker Service
+  service: name=docker enabled=yes
+
+- name: Start the docker service
+  service: name=docker state=started
+
+- name: backup of grub file
+  command: /bin/cp -p /boot/grub2/grub.cfg /boot/grub2/grub.cfg_Original
+
+- name: replace content
+  replace: dest=/boot/grub2/grub.cfg regexp='ipv6.disable=1' replace='ipv6.disable=0' backup=yes
+#  command: /sbin/grub2-mkconfig -o /boot/grub2/grub.cfg
+
+- name: reboot the servers
+  shell: sleep 2 && /usr/sbin/reboot "Ansible system package upgraded"
+  async: 1
+  poll: 0
+  ignore_errors: true
+
+#- name: waiting 30 secs for server to come back
+#  local_action: wait_for host={{ ansible_default_ipv4.address }} port=22 state=started delay=50 timeout=60
+#  become: false
+
+- name: pause is mandatory,otherwise the existing control connection gets refused
+  pause: seconds=240
+  ignore_errors: true
+
+- name: execute the below command to check the uptime 
+  command: /bin/uptime
+  ignore_errors: true

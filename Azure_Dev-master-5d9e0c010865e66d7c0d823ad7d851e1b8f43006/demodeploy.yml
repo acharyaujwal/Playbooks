@@ -1,0 +1,13 @@
+---
+- name: To copy the file from one server to another server.
+  hosts: all
+#  remote_user: azureuser
+  tasks:
+   - name: To copy the file from artifactory.
+     get_url:
+       url: http://52.172.211.74:8081/artifactory/libs-snapshot-local/prod/devans/prodevansApp/0.0.1-SNAPSHOT/prodevansApp-0.0.1-SNAPSHOT.war
+       url_username: admin
+       url_password: Pr0dev@ns
+       dest: /var/lib/tomcat/webapps
+   - name: mv prodevansApp-0.0.1-SNAPSHOT.war to prodevans
+     command: mv -r prodevansApp-0.0.1-SNAPSHOT prodevans

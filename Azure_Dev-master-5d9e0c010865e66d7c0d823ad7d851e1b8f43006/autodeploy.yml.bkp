@@ -1,0 +1,55 @@
+---
+- hosts: all
+  tasks:
+  - name: Add Jenkins key to the VM
+    copy:
+      content: "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQCyNB7f0m8C5wvbAU4a6X7LNMPHHhSejcw4F4jlMB/6JmV0hm94LgDAiBRDmB7KyLrSxzKXLUS5rcJSOhYo9ns5mjA3CLJFJVAef6o83okaJhibL2VgPsqx+lhhCeAeoyDPQYYyLDOXacdrL+MZMPfrpCM6QPrTRKw5fNLSp0vGet5RtPW7BVCO7hrbEDARMJsipOL6NAHMJ5NNPgzQVjvY+QjBamFUeyGEe+pbA51ieu3Y0QSK63V+291tLxV0ZaakiHPtbNSznPAUxpfGChpFgcgEyr/f882fihHYCc/DeBPO+6LCzgN5SAhakOSduvGFt49ayvoEOKRxaPPiSoFJ jenkins@Forge-CICDMaster001"
+      dest: /home/azureuser/.ssh/authorized_keys
+      
+  - name: Create .ssh directory
+    file:
+      path: /root/.ssh
+      state: directory
+  
+  - name: Add Jenkins key to root user of the VM
+    copy:
+      content: "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQCyNB7f0m8C5wvbAU4a6X7LNMPHHhSejcw4F4jlMB/6JmV0hm94LgDAiBRDmB7KyLrSxzKXLUS5rcJSOhYo9ns5mjA3CLJFJVAef6o83okaJhibL2VgPsqx+lhhCeAeoyDPQYYyLDOXacdrL+MZMPfrpCM6QPrTRKw5fNLSp0vGet5RtPW7BVCO7hrbEDARMJsipOL6NAHMJ5NNPgzQVjvY+QjBamFUeyGEe+pbA51ieu3Y0QSK63V+291tLxV0ZaakiHPtbNSznPAUxpfGChpFgcgEyr/f882fihHYCc/DeBPO+6LCzgN5SAhakOSduvGFt49ayvoEOKRxaPPiSoFJ jenkins@Forge-CICDMaster001"
+      dest: /root/.ssh/authorized_keys
+  
+  - name: Adding sudo privileges azureuser
+    lineinfile:
+      dest: /etc/sudoers.d/azureuser
+      state: present
+      create: yes
+      line: "azureuser ALL=(ALL) NOPASSWD: ALL"
+  
+  - name: Remove waagent file
+    file:
+      path: /etc/sudoers.d/waagent
+      state: absent  
+
+  - name: Change tomcat port for Dev
+    lineinfile:
+       path: /etc/tomcat/server.xml
+       regexp: '<Connector port="8080" protocol="HTTP/1.1"'
+       line: '<Connector port="8081" protocol="HTTP/1.1"'
+    tags:
+       - dev
+    notify:
+       - restart tomcat
+    
+  - name: Change tomcat port for Stage
+    lineinfile:
+       path: /etc/tomcat/server.xml
+       regexp: '<Connector port="8080" protocol="HTTP/1.1"'
+       line: '<Connector port="8082" protocol="HTTP/1.1"'
+    tags: stage
+    notify:
+       - restart tomcat
+     
+  handlers:
+    - name: restart tomcat
+      service:
+        name: tomcat
+        state: restarted
+
